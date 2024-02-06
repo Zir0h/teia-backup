@@ -251,7 +251,7 @@ if ($response === false) {
   foreach ($responseData['data']['holdings'] as $token) {
     $ext = mime2ext($token['token']['mime_type']);
     if($ext === false) {
-      $ext = 'car';
+      $ext = 'tar';
     }
     $url = 'https://cache.teia.rocks/ipfs/' . str_replace('ipfs://', '', $token['token']['artifact_uri']) . '?download=true&format=' . $ext;
     echo '<a href="' . $url . '">' . $url . '</a><br />';
