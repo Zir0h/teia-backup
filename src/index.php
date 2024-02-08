@@ -92,7 +92,8 @@ if ($response === false) {
     if($ext === false) {
       $ext = 'tar';
     }
-    $url = 'https://cache.teia.rocks/ipfs/' . str_replace('ipfs://', '', $token['token']['artifact_uri']) . '?download=true&format=' . $ext;
+    $cid = str_replace('ipfs://', '', $token['token']['artifact_uri']);
+    $url = 'https://cache.teia.rocks/ipfs/' . $cid . '?download=true&format=' . $ext . '&filename=' . $cid . '.' . $ext;
     echo '<a href="' . $url . '">' . $url . '</a><br />';
   }
   curl_close($curl);
