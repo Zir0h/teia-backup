@@ -1,9 +1,10 @@
 version: '3'
 services:
   php:
-    image: php:7.4-fpm
+    image: php:fpm-alpine
     volumes:
       - ./src:/var/www/html
+      - ./memory.ini:/usr/local/etc/php/conf.d/memory.ini
 
   nginx:
     image: nginx:latest
