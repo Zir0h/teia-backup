@@ -36,8 +36,8 @@ function mime2ext($mime)
   return isset($mime_map[$mime]) === true ? $mime_map[$mime] : false;
 }
 
-if (!isset($_GET['address'])) {
-  die('Please specify a wallet address in the url using ?address=sometezosaddress');
+if (!isset($_GET['address']) || strlen($_GET['address']) != 36) {
+  die('Please specify a valid Tezos wallet address');
 }
 
 $url = "https://teztok.teia.rocks/v1/graphql";
@@ -107,6 +107,7 @@ curl_setopt($curl, CURLOPT_POST, true);
 curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
 
 $response = curl_exec($curl);
+$links = array();
 if ($response === false) {
   // Handle error
   $error = curl_error($curl);
@@ -120,10 +121,30 @@ if ($response === false) {
     if (isset($token['token']['formats'])) {
       foreach ($token['token']['formats'] as $format) {
         if ($link = getDownloadLink($format['uri'], $token['token']['mime_type'], $token['token']['platform'], $format, $found)) {
-          echo $link;
+          $links[] = $link;
         }
       }
     }
   }
   curl_close($curl);
 }
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Backup your NFT's</title>
+</head>
+<body>
+<p>This page is meant to be used in combination with <a href="https://www.downthemall.net/">DownThemAll</a>. Install the extension and add the following links to the download queue:</p>
+<?php if(count($links) > 0): ?>
+  <?php
+  foreach($links as $link) {
+    echo $link;
+  }
+  ?>
+<?php else: ?>
+  This wallet does not contain any tokens.
+<?php endif; ?>
+</body>
+</html>
