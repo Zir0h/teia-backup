@@ -36,7 +36,7 @@ function mime2ext($mime)
   return isset($mime_map[$mime]) === true ? $mime_map[$mime] : false;
 }
 
-if(!isset($_GET['address'])) {
+if (!isset($_GET['address'])) {
   die('Please specify a wallet address in the url using ?address=sometezosaddress');
 }
 
@@ -44,12 +44,11 @@ $url = "https://teztok.teia.rocks/v1/graphql";
 $data = array(
   "query" => "
       fragment baseTokenFields on tokens {
-        artifact_uri
         mime_type
         name
         token_id
+        formats
       }
-
       query collectorGallery(\$address: String!) {
         holdings(
           where: {
@@ -72,6 +71,30 @@ $data = array(
   "operationName" => "collectorGallery"
 );
 
+function getDownloadLink($cid, $type, $format, &$found)
+{
+  $cid = str_replace('ipfs://', '', $cid);
+  if (isset($found[$cid])) {
+    return false;
+  }
+
+  $found[$cid] = 1;
+
+  $ext = mime2ext($type);
+  if ($ext === false) {
+    $ext = 'tar';
+  }
+
+  if (isset($format['file_name'])) {
+    $filename = str_replace('ipfs://', '', $format['file_name']);
+  } else {
+    $filename = str_replace('ipfs://', '', $format['uri']) . '.' . $ext;
+  }
+
+  $url = 'https://cache.teia.rocks/ipfs/' . $cid . '?download=true&format=' . $ext . '&filename=' . $filename;
+  return '<a href="' . $url . '">' . $url . '</a><br />';
+}
+
 $curl = curl_init($url);
 curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($curl, CURLOPT_HTTPHEADER, array("Content-Type: application/json"));
@@ -87,14 +110,15 @@ if ($response === false) {
 } else {
   // Handle response
   $responseData = json_decode($response, true);
+  $found = array();
   foreach ($responseData['data']['holdings'] as $token) {
-    $ext = mime2ext($token['token']['mime_type']);
-    if($ext === false) {
-      $ext = 'tar';
+    if (isset($token['token']['formats'])) {
+      foreach ($token['token']['formats'] as $format) {
+        if ($link = getDownloadLink($format['uri'], $token['token']['mime_type'], $format, $found)) {
+          echo $link;
+        }
+      }
     }
-    $cid = str_replace('ipfs://', '', $token['token']['artifact_uri']);
-    $url = 'https://cache.teia.rocks/ipfs/' . $cid . '?download=true&format=' . $ext . '&filename=' . $cid . '.' . $ext;
-    echo '<a href="' . $url . '">' . $url . '</a><br />';
   }
   curl_close($curl);
 }
