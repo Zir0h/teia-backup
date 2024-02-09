@@ -96,8 +96,8 @@ function getDownloadLink($cid, $type, $platform, $format, &$found)
     $gateway = 'cache.teia.rocks';
   }
 
-  $url = 'https://' . $gateway . '/ipfs/' . $cid . '?download=true&format=' . $ext . '&filename=' . $filename;
-  return '<a href="' . $url . '">' . $url . '</a><br />';
+  $url = "https://{$gateway}/ipfs/{$cid}?download=true&format={$ext}&filename={$filename}";
+  return "<a href=\"{$url}\">{$url}</a><br />";
 }
 
 $curl = curl_init($url);
