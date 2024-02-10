@@ -19,9 +19,9 @@
     <form action="index.php" method="get">
       <div class="form-group">
         <label for="address">Tezos wallet address</label>
-        <input type="text" name="address" class="form-control" aria-describedby="addressHelp"
-          placeholder="Enter Tezos wallet address" />
-        <small id="addressHelp" class="form-text text-muted">Only long form Tezos addresses are supported.</small>
+        <input required pattern="[a-zA-Z0-9]{36}" type="text" name="address" class="form-control" aria-describedby="addressHelp"
+          placeholder="Enter Tezos wallet address. Long form." />
+        <small id="addressHelp" class="form-text text-muted">Only long form Tezos addresses are supported. For example: tz1VdRFNxALoiYPbD7LWdacZQSVcc2YudM6D</small>
       </div>
       <div class="form-group form-check">
         <input type="checkbox" class="form-check-input" class="form-control" name="includeNonTEIA" />
