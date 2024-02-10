@@ -36,13 +36,20 @@ function mime2ext($mime)
   return isset($mime_map[$mime]) === true ? $mime_map[$mime] : false;
 }
 
-if (!isset($_GET['address']) || strlen($_GET['address']) != 36) {
+if (isset($_GET['address']) && strlen($_GET['address']) === 36) {
+  $address = $_GET['address'];
+} else {
   die('Please specify a valid Tezos wallet address');
 }
 
 $url = "https://teztok.teia.rocks/v1/graphql";
-if(isset($_GET['includeNonTEIA'])) {
+if (isset($_GET['includeNonTEIA'])) {
   $url = "https://api.teztok.com/v1/graphql";
+}
+
+$useCAR = false;
+if (isset($_GET['useCAR'])) {
+  $useCAR = 1;
 }
 
 $data = array(
@@ -72,27 +79,33 @@ $data = array(
   "operationName" => "collectorGallery"
 );
 
-function getDownloadLink($cid, $type, $platform, $format, &$found)
+function getDownloadLink($cid, $type, $platform, $format, &$found, $useCAR = false)
 {
-  $cid = str_replace('ipfs://', '', $cid);
+  $cid = str_replace('ipfs://', '', explode('/', $cid)[2]);
   if (isset($found[$cid])) {
     return false;
   }
 
   $found[$cid] = 1;
-
-  $ext = mime2ext($type);
-  if ($ext === false) {
-    $ext = 'tar';
+  if ($useCAR) {
+    $ext = 'car';
+  } else {
+    $ext = mime2ext($type);
+    if (isset($format['mime_type'])) {
+      $ext = mime2ext($format['mime_type']);
+    }
+    if ($ext === false) {
+      $ext = 'tar';
+    }
   }
 
-  $filename = str_replace('ipfs://', '', $format['uri']) . '.' . $ext;
-  if (isset($format['file_name'])) {
+  $filename = $cid . '.' . $ext;
+  if (!$useCAR && isset($format['file_name'])) {
     $filename = str_replace('ipfs://', '', $format['file_name']);
   }
 
   $gateway = 'nftstorage.link';
-  if($platform === 'HEN') {
+  if ($platform === 'HEN') {
     $gateway = 'cache.teia.rocks';
   }
 
@@ -120,7 +133,7 @@ if ($response === false) {
   foreach ($responseData['data']['holdings'] as $token) {
     if (isset($token['token']['formats'])) {
       foreach ($token['token']['formats'] as $format) {
-        if ($link = getDownloadLink($format['uri'], $token['token']['mime_type'], $token['token']['platform'], $format, $found)) {
+        if ($link = getDownloadLink($format['uri'], $token['token']['mime_type'], $token['token']['platform'], $format, $found, $useCAR)) {
           $links[] = $link;
         }
       }
@@ -131,20 +144,26 @@ if ($response === false) {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <title>Backup your NFT's</title>
 </head>
+
 <body>
-<p>This page is meant to be used in combination with <a href="https://www.downthemall.net/">DownThemAll</a>. Install the extension and add the following links to the download queue:</p>
-<?php if(count($links) > 0): ?>
+  <p>This page is meant to be used in combination with <a href="https://www.downthemall.net/">DownThemAll</a>. Install
+    the extension and add the following links to the download queue:</p>
   <?php
-  foreach($links as $link) {
-    echo $link;
+  $amount = count($links);
+  if ($amount > 0) {
+    echo "<p>Found {$amount} tokens in {$address}.</p>";
+    foreach ($links as $link) {
+      echo $link;
+    }
+  } else {
+    echo "<p>This wallet does not contain any tokens.</p>";
   }
   ?>
-<?php else: ?>
-  This wallet does not contain any tokens.
-<?php endif; ?>
 </body>
+
 </html>
