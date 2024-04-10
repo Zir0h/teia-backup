@@ -1,6 +1,12 @@
 <?php
-// Define the base URL for the sitemap
-$baseUrl = 'https://teia.art/';
+
+if (file_exists('/tmp/sitemap.xml') && time() - filemtime('/tmp/sitemap.xml') < getenv('REFRESH_INTERVAL')) {
+    // Sitemap was generated less than 24 hours ago, return its content
+    $sitemap = file_get_contents('/tmp/sitemap.xml');
+    header('Content-Type: application/xml');
+    echo $sitemap;
+    exit;
+}
 
 // Create a new DOM document
 $dom = new DOMDocument('1.0', 'UTF-8');
@@ -12,7 +18,7 @@ $urlset->setAttribute('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9');
 $dom->appendChild($urlset);
 
 // Fetch the tokens from the GraphQL endpoint
-$query = 'query sitemap @cached(ttl: 3600) {
+$query = 'query sitemap {
     tokens {
         token_id
     }
@@ -34,7 +40,7 @@ if ($response) {
         foreach ($data['data']['tokens'] as $token) {
             $url = $dom->createElement('url');
 
-            $loc = $dom->createElement('loc', $baseUrl . 'objkt/' . $token['token_id']);
+            $loc = $dom->createElement('loc', getenv('BASE_URL') . 'objkt/' . $token['token_id']);
             $url->appendChild($loc);
 
             $urlset->appendChild($url);
@@ -43,4 +49,5 @@ if ($response) {
 }
 
 // Save the XML document to a file
+$dom->save('/tmp/sitemap.xml');
 echo $dom->saveXML();
