@@ -1,12 +1,23 @@
-version: '3'
+version: '3.9'
 services:
+  chown-sitemap:
+    image: php:fpm-alpine
+    volumes:
+      - sitemap:/var/www/sitemap
+    command: chown -R www-data:www-data /var/www/sitemap
+
   php:
+    user: www-data
     image: php:fpm-alpine
     volumes:
       - ./src:/var/www/html
-      - ./memory.ini:/usr/local/etc/php/conf.d/memory.ini
+      - ./settings.ini:/usr/local/etc/php/conf.d/settings.ini
+      - sitemap:/var/www/sitemap
     env_file:
       - .env
+    depends_on:
+      chown-sitemap:
+        condition: service_completed_successfully
 
   nginx:
     image: nginx:latest
@@ -15,3 +26,10 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - ./src:/var/www/html
+      - sitemap:/var/www/sitemap
+    depends_on:
+        php:
+          condition: service_started
+
+volumes:
+  sitemap:
