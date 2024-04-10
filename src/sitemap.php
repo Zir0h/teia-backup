@@ -57,7 +57,7 @@ if ($response) {
             $dom->save('/var/www/sitemap/sitemap_' . $i . '.xml');
 
             $sub = $sitemap->createElement('sitemap');
-            $loc = $sitemap->createElement('loc', getenv('SITEMAP_HOST') . '/sitemap_' . $i . '.xml');
+            $loc = $sitemap->createElement('loc', getenv('SITEMAP_HOST') . '/sitemap/sitemap_' . $i . '.xml');
             $sub->appendChild($loc);
             $sitemapindex->appendChild($sub);
         }
