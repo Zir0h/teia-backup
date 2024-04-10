@@ -5,6 +5,8 @@ services:
     volumes:
       - ./src:/var/www/html
       - ./memory.ini:/usr/local/etc/php/conf.d/memory.ini
+    env_file:
+      - .env
 
   nginx:
     image: nginx:latest
