@@ -25,7 +25,10 @@ $query = 'query sitemap {
 }';
 
 $curl = curl_init(getenv('TEZTOK_URL'));
-curl_setopt($curl, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'x-hasura-admin-secret: ' . getenv('TEZTOK_KEY')]);
+curl_setopt($curl, CURLOPT_HTTPHEADER, [
+    'Content-Type: application/json',
+    (getenv('TEZTOK_KEY') !== '' ? 'x-hasura-admin-secret: ' . getenv('TEZTOK_KEY') : ''),
+]);
 curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($curl, CURLOPT_POST, true);
 curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode(['query' => $query]));
@@ -37,7 +40,7 @@ if ($response) {
 
     if (isset($data['data']['tokens'])) {
         $total = count($data['data']['tokens']);
-        for($i = 0; $i < $total; $i += 50000) {
+        for($i = 0; $i < $total; $i += getenv('SITEMAP_SIZE')) {
             // Create a new DOM document
             $dom = new DOMDocument('1.0', 'UTF-8');
             $dom->formatOutput = false;

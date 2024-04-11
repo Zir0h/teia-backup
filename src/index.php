@@ -43,7 +43,9 @@ if (isset($_GET['address']) && strlen($_GET['address']) === 36) {
 }
 
 $url = "https://teztok.teia.rocks/v1/graphql";
+$teiaOnly = true;
 if (isset($_GET['includeNonTEIA'])) {
+  $teiaOnly = false;
   $url = "https://api.teztok.com/v1/graphql";
 }
 
@@ -115,7 +117,10 @@ function getDownloadLink($cid, $type, $platform, $format, &$found, $useCAR = fal
 
 $curl = curl_init($url);
 curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($curl, CURLOPT_HTTPHEADER, array("Content-Type: application/json"));
+curl_setopt($curl, CURLOPT_HTTPHEADER, array(
+  "Content-Type: application/json",
+  ($teiaOnly ? 'x-hasura-admin-secret: ' . getenv('TEZTOK_KEY') : ''),
+));
 curl_setopt($curl, CURLOPT_POST, true);
 curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
 
