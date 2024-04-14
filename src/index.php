@@ -54,6 +54,11 @@ if (isset($_GET['useCAR'])) {
   $useCAR = 1;
 }
 
+$asJSON = false;
+if (isset($_GET['asJSON'])) {
+  $asJSON = 1;
+}
+
 $data = array(
   "query" => "
       query collectorGallery(\$address: String!) {
@@ -81,7 +86,7 @@ $data = array(
   "operationName" => "collectorGallery"
 );
 
-function getDownloadLink($cid, $type, $platform, $format, &$found, $useCAR = false)
+function getDownloadLink($cid, $type, $platform, $format, &$found, $useCAR = false, $asJSON = false)
 {
   $cid = str_replace('ipfs://', '', explode('/', $cid)[2]);
   if (isset($found[$cid])) {
@@ -112,6 +117,11 @@ function getDownloadLink($cid, $type, $platform, $format, &$found, $useCAR = fal
   }
 
   $url = "https://{$gateway}/ipfs/{$cid}?download=true&format={$ext}&filename={$filename}";
+
+  if($asJSON) {
+    return array('cid' => $cid, 'url' => $url);
+  }
+
   return "<a href=\"{$url}\">{$url}</a><br />";
 }
 
@@ -138,7 +148,7 @@ if ($response === false) {
   foreach ($responseData['data']['holdings'] as $token) {
     if (isset($token['token']['formats'])) {
       foreach ($token['token']['formats'] as $format) {
-        if ($link = getDownloadLink($format['uri'], $token['token']['mime_type'], $token['token']['platform'], $format, $found, $useCAR)) {
+        if ($link = getDownloadLink($format['uri'], $token['token']['mime_type'], $token['token']['platform'], $format, $found, $useCAR, $asJSON)) {
           $links[] = $link;
         }
       }
@@ -146,6 +156,14 @@ if ($response === false) {
   }
   curl_close($curl);
 }
+
+if($asJSON) {
+  header('Content-Type: application/json');
+  echo json_encode($links);
+  exit;
+}
+
+
 ?>
 <!doctype html>
 <html lang="en">
