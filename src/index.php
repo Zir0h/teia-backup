@@ -126,6 +126,7 @@ curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
 
 $response = curl_exec($curl);
 $links = array();
+
 if ($response === false) {
   // Handle error
   $error = curl_error($curl);
@@ -190,6 +191,40 @@ if ($response === false) {
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
     integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
     crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kubo-rpc-client/dist/index.min.js" defer></script>
+  <script src="https://unpkg.com/multiformats/dist/index.min.js" defer></script>
+  <script type="module">
+    document.addEventListener('DOMContentLoaded', async () => {
+        const node = KuboRpcClient.create({ host: 'localhost', port: 5001 })
+        if(await node.isOnline()) {
+          // connect to teia ipfs node for peering
+          const connect = await node.swarm.connect('/p2p/12D3KooWP84PmvN2ncA2vDCzoea2DGgBsEgxRreiMWpvZdpEgtrq')
+          console.log(connect)
+          const cids = <?php echo json_encode(array_keys($found)) . "\n"; ?>
+          for(const cid of cids) {
+            // console.log(cid)
+            // const pinCid = Multiformats.CID.parse(cid)
+            //for await (const pin of node.pin.addAll([pinCid])) {
+            //  console.log(pin)
+            //}
+          }
+          for await (const { cid, type } of node.pin.ls({ type: 'recursive' })) {
+            //console.log({ cid, type })
+          }
+        } else {
+          console.log("local IPFS node is down")
+        }
+      })
+  </script>
 </body>
-
+<!--
+TODO
+add better instructions on how to setup ipfs node
+show ipfs node status
+separate page for pinning/ipfs shizzle
+add pins without waiting (don't know if this is possible)
+show pinning progress
+show current pinned content
+add option to remove individual/all pins
+-->
 </html>
