@@ -49,11 +49,6 @@ if (isset($_GET['includeNonTEIA'])) {
   $url = "https://api.teztok.com/v1/graphql";
 }
 
-$useCAR = false;
-if (isset($_GET['useCAR'])) {
-  $useCAR = 1;
-}
-
 $data = array(
   "query" => "
       query collectorGallery(\$address: String!) {
@@ -61,7 +56,6 @@ $data = array(
           where: {
             holder_address: { _eq: \$address }
             token: {
-              artist_address: { _neq: \$address }
               metadata_status: { _eq: \"processed\" }
             }
             amount: { _gt: \"0\" }
@@ -80,40 +74,6 @@ $data = array(
   "variables" => array("address" => $_GET['address']),
   "operationName" => "collectorGallery"
 );
-
-function getDownloadLink($cid, $type, $platform, $format, &$found, $useCAR = false)
-{
-  $cid = str_replace('ipfs://', '', explode('/', $cid)[2]);
-  if (isset($found[$cid])) {
-    return false;
-  }
-
-  $found[$cid] = 1;
-  if ($useCAR) {
-    $ext = 'car';
-  } else {
-    $ext = mime2ext($type);
-    if (isset($format['mime_type'])) {
-      $ext = mime2ext($format['mime_type']);
-    }
-    if ($ext === false) {
-      $ext = 'tar';
-    }
-  }
-
-  $filename = $cid . '.' . $ext;
-  if (!$useCAR && isset($format['file_name'])) {
-    $filename = str_replace('ipfs://', '', $format['file_name']);
-  }
-
-  $gateway = 'nftstorage.link';
-  if ($platform === 'HEN') {
-    $gateway = 'cache.teia.rocks';
-  }
-
-  $url = "https://{$gateway}/ipfs/{$cid}?download=true&format={$ext}&filename={$filename}";
-  return "<a href=\"{$url}\">{$url}</a><br />";
-}
 
 $curl = curl_init($url);
 curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
@@ -139,8 +99,32 @@ if ($response === false) {
   foreach ($responseData['data']['holdings'] as $token) {
     if (isset($token['token']['formats'])) {
       foreach ($token['token']['formats'] as $format) {
-        if ($link = getDownloadLink($format['uri'], $token['token']['mime_type'], $token['token']['platform'], $format, $found, $useCAR)) {
-          $links[] = $link;
+        $cid = str_replace('ipfs://', '', explode('/', $format['uri'])[2]);
+        if (!isset($found[$cid])) {
+          $ext = mime2ext($token['token']['mime_type']);
+          if (isset($format['mime_type'])) {
+            $ext = mime2ext($format['mime_type']);
+          }
+          if ($ext === false) {
+            $ext = 'tar';
+          }
+
+          $filename = $cid . '.' . $ext;
+          if (isset($format['file_name'])) {
+            $filename = str_replace('ipfs://', '', $format['file_name']);
+          }
+
+          $gateway = 'nftstorage.link';
+          if ($token['token']['platform'] === 'HEN') {
+            $gateway = 'cache.teia.rocks';
+          }
+
+          $found[$cid] = array(
+            'cid' => $cid,
+            'car' => "https://{$gateway}/ipfs/{$cid}?format=car",
+            'link' => "https://{$gateway}/ipfs/{$cid}?download=true&format={$ext}&filename={$filename}",
+            'platform' => $token['token']['platform'],
+          );
         }
       }
     }
@@ -168,12 +152,21 @@ if ($response === false) {
     <h1>Backup your Tezos NFT's</h1>
     <p>This page is meant to be used in combination with <a href="https://www.downthemall.net/">DownThemAll</a>. Install
       the extension and add the following links to the download queue:</p>
+
+    <p>
+      You can also import and pin these to an ipfs node running on localhost:5001, like for example with <a href="https://docs.ipfs.tech/install/ipfs-desktop/">ipfs-desktop</a>.<br />
+      Your ipfs node is currently: <span id="nodeStatus"></span><br />
+      Pinning status: <span id="pinningStatus"></span> / <?php echo count($found); ?><br />
+      <a href="#" id="pinAll">Click here to start pinning</a><br />
+      <span id="log"></span>
+    </p>
+
     <?php
-    $amount = count($links);
+    $amount = count($found);
     if ($amount > 0) {
-      echo "<p>Found {$amount} tokens in {$address}.</p>";
-      foreach ($links as $link) {
-        echo $link;
+      echo "<p>Found {$amount} pinnable artifacts in {$address}.</p>";
+      foreach ($found as $link) {
+        echo "<a href=\"{$link['link']}\">{$link['link']}</a><br />";
       }
     } else {
       echo "<p>This wallet does not contain any tokens.</p>";
@@ -194,33 +187,60 @@ if ($response === false) {
   <script src="https://cdn.jsdelivr.net/npm/kubo-rpc-client/dist/index.min.js" defer></script>
   <script src="https://unpkg.com/multiformats/dist/index.min.js" defer></script>
   <script type="module">
-    document.addEventListener('DOMContentLoaded', async () => {
-        const node = KuboRpcClient.create({ host: 'localhost', port: 5001 })
-        if(await node.isOnline()) {
-          // connect to teia ipfs node for peering
-          await node.swarm.connect('/p2p/12D3KooWP84PmvN2ncA2vDCzoea2DGgBsEgxRreiMWpvZdpEgtrq')
-          
-          const cids = <?php echo json_encode(array_keys($found)) . "\n"; ?>
-          for(const cid of cids) {
-            const { content } = KuboRpcClient.urlSource(`https://cache.teia.rocks/ipfs/${cid}?download=true&format=car`)
-            try {
-              for await (const { returnedCid, type } of node.pin.ls({ type: 'recursive', paths: [cid] })) {
-                console.log({ returnedCid, type })
-              }
-              console.log(`${cid} is already pinned`)
-            } catch {
-              console.log(`need to pin ${cid}`)
-              let returnedCid
-              for await (const file of node.dag.import(content)) {
-                returnedCid = file.root.cid
-              }
-              console.log(returnedCid.toString())
+    const pinAll = document.getElementById("pinAll")
+    const node = KuboRpcClient.create({ host: 'localhost', port: 5001 })
+    const pinningStatus = document.getElementById("pinningStatus")
+    pinningStatus.innerText = 0
+
+    setInterval( async () => {
+      const isOnline = await node.isOnline()
+      const span = document.getElementById("nodeStatus")
+      span.innerText = isOnline ? "RUNNING" : "DOWN";
+    }, 1000)
+
+    const log = document.getElementById("log")
+    function appendLog(text) {
+      const logEntry = document.createTextNode(text)
+      const br = document.createElement("br")
+      log.appendChild(logEntry)
+      log.appendChild(br)
+    }
+
+    pinAll.addEventListener('click', async () => {
+      if(await node.isOnline()) {
+        // connect to teia ipfs node for peering
+        await node.swarm.connect('/p2p/12D3KooWP84PmvN2ncA2vDCzoea2DGgBsEgxRreiMWpvZdpEgtrq')
+
+        const artifacts = <?php echo json_encode(array_values($found)) . "\n"; ?>
+        let count = 0
+        for(const artifact of artifacts) {
+          try {
+            const cid = artifact.platform !== 'HEN' ? Multiformats.CID.parse(artifact.cid.toString()).toV1().toString() : artifact.cid
+            for await (const { returnedCid, type } of node.pin.ls({ type: 'recursive', paths: [cid] })) {
+              appendLog(`${cid} is already pinned, skipping`)
             }
+          } catch {
+            appendLog(`PINNING ${artifact.cid}, FETCHING ${artifact.car}`)
+            const { content } = KuboRpcClient.urlSource(artifact.car)
+            let returnedCid
+            for await (const file of node.dag.import(content)) {
+              returnedCid = file.root.cid
+            }
+
+            if(Multiformats.CID.parse(returnedCid.toString()).toV1().toString() === Multiformats.CID.parse(artifact.cid.toString()).toV1().toString()) {
+              appendLog(`Successfully pinned ` + artifact.car)
+            } else {
+              appendLog(`CID mismatch, failed to pin: ${artifact.car} EXPECTED: ${artifact.cid} GOT: ${returnedCid}`)
+            }
+          } finally {
+            count++
+            pinningStatus.innerText = count
           }
-        } else {
-          console.log("local IPFS node is down")
         }
-      })
+      } else {
+        appendLog("local IPFS node is down")
+      }
+    })
   </script>
 </body>
 <!--
