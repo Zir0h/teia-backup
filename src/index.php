@@ -247,12 +247,14 @@ if ($response === false) {
                 appendLog(`CID mismatch, failed to pin: ${artifact.car} EXPECTED: ${artifact.cid} GOT: ${returnedCid}`)
               }
             } catch (error) {
-              appendLog(`Unable to download ${artifact.car} ${error}`)
-
-              const cid = Multiformats.CID.parse(artifact.cid.toString())
-              const pinned = await node.pin.add(cid, { signal: AbortSignal.timeout(5000) })
-              appendLog(pinned)
-
+              appendLog(`Unable to download ${artifact.car} ${error}. Trying IPFS PIN add rpc call`)
+              try {
+                const cid = Multiformats.CID.parse(artifact.cid.toString())
+                const pinned = await node.pin.add(cid, { signal: AbortSignal.timeout(5000) })
+                appendLog(pinned)
+              } catch {
+                appendLog(`IPFS PIN add failed, giving up on ${artifact.cid}`)
+              }
             }
           } finally {
             count++
