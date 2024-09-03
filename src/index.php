@@ -188,7 +188,7 @@ if ($response === false) {
   <script src="https://unpkg.com/multiformats/dist/index.min.js" defer></script>
   <script type="module">
     const pinAll = document.getElementById("pinAll")
-    const node = KuboRpcClient.create({ host: 'localhost', port: 5001 })
+    const node = KuboRpcClient.create('http://127.0.0.1:5001')
     const pinningStatus = document.getElementById("pinningStatus")
     pinningStatus.innerText = 0
 
