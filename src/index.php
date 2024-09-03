@@ -234,16 +234,20 @@ if ($response === false) {
             }
           } catch {
             appendLog(`PINNING ${artifact.cid}, FETCHING ${artifact.car}`)
-            const { content } = KuboRpcClient.urlSource(artifact.car)
-            let returnedCid
-            for await (const file of node.dag.import(content)) {
-              returnedCid = file.root.cid
-            }
+            try {
+              const { content } = KuboRpcClient.urlSource(artifact.car)
+              let returnedCid
+              for await (const file of node.dag.import(content)) {
+                returnedCid = file.root.cid
+              }
 
-            if(Multiformats.CID.parse(returnedCid.toString()).toV1().toString() === Multiformats.CID.parse(artifact.cid.toString()).toV1().toString()) {
-              appendLog(`Successfully pinned ` + artifact.car)
-            } else {
-              appendLog(`CID mismatch, failed to pin: ${artifact.car} EXPECTED: ${artifact.cid} GOT: ${returnedCid}`)
+              if(Multiformats.CID.parse(returnedCid.toString()).toV1().toString() === Multiformats.CID.parse(artifact.cid.toString()).toV1().toString()) {
+                appendLog(`Successfully pinned ` + artifact.car)
+              } else {
+                appendLog(`CID mismatch, failed to pin: ${artifact.car} EXPECTED: ${artifact.cid} GOT: ${returnedCid}`)
+              }
+            } catch (error) {
+              appendLog(`Unable to download ${artifact.car} ${error}`)
             }
           } finally {
             count++
