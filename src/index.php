@@ -155,6 +155,7 @@ if ($response === false) {
 
     <p>
       You can also import and pin these to an ipfs node running on localhost:5001, like for example with <a href="https://docs.ipfs.tech/install/ipfs-desktop/">ipfs-desktop</a>.<br />
+      For this to work, you must also add "https://backup.teia.art" to the API->HTTPHeaders->Access-Control-Allow-Origin list in your ipfs config and restart the node.<br />
       Your ipfs node is currently: <span id="nodeStatus"></span><br />
       Pinning status: <span id="pinningStatus"></span> / <?php echo count($found); ?><br />
       <a href="#" id="pinAll">Click here to start pinning</a><br />
