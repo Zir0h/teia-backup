@@ -248,6 +248,11 @@ if ($response === false) {
               }
             } catch (error) {
               appendLog(`Unable to download ${artifact.car} ${error}`)
+
+              const cid = Multiformats.CID.parse(artifact.cid.toString())
+              const pinned of node.pin.add(cid)
+              appendLog(pinned)
+
             }
           } finally {
             count++
