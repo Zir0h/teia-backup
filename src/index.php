@@ -250,7 +250,7 @@ if ($response === false) {
               appendLog(`Unable to download ${artifact.car} ${error}`)
 
               const cid = Multiformats.CID.parse(artifact.cid.toString())
-              const pinned of node.pin.add(cid)
+              const pinned = await node.pin.add(cid)
               appendLog(pinned)
 
             }
