@@ -198,18 +198,24 @@ if ($response === false) {
         const node = KuboRpcClient.create({ host: 'localhost', port: 5001 })
         if(await node.isOnline()) {
           // connect to teia ipfs node for peering
-          const connect = await node.swarm.connect('/p2p/12D3KooWP84PmvN2ncA2vDCzoea2DGgBsEgxRreiMWpvZdpEgtrq')
-          console.log(connect)
+          await node.swarm.connect('/p2p/12D3KooWP84PmvN2ncA2vDCzoea2DGgBsEgxRreiMWpvZdpEgtrq')
+          
           const cids = <?php echo json_encode(array_keys($found)) . "\n"; ?>
           for(const cid of cids) {
-            // console.log(cid)
-            // const pinCid = Multiformats.CID.parse(cid)
-            //for await (const pin of node.pin.addAll([pinCid])) {
-            //  console.log(pin)
-            //}
-          }
-          for await (const { cid, type } of node.pin.ls({ type: 'recursive' })) {
-            //console.log({ cid, type })
+            const { content } = KuboRpcClient.urlSource(`https://cache.teia.rocks/ipfs/${cid}?download=true&format=car`)
+            try {
+              for await (const { returnedCid, type } of node.pin.ls({ type: 'recursive', paths: [cid] })) {
+                console.log({ returnedCid, type })
+              }
+              console.log(`${cid} is already pinned`)
+            } catch {
+              console.log(`need to pin ${cid}`)
+              let returnedCid
+              for await (const file of node.dag.import(content)) {
+                returnedCid = file.root.cid
+              }
+              console.log(returnedCid.toString())
+            }
           }
         } else {
           console.log("local IPFS node is down")
@@ -220,9 +226,12 @@ if ($response === false) {
 <!--
 TODO
 add better instructions on how to setup ipfs node
+make ipfs node/port customizable
+make ipfs gateway customizable
 show ipfs node status
 separate page for pinning/ipfs shizzle
 add pins without waiting (don't know if this is possible)
+add pins without DAG import
 show pinning progress
 show current pinned content
 add option to remove individual/all pins
