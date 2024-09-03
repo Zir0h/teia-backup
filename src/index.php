@@ -235,7 +235,7 @@ if ($response === false) {
           } catch {
             appendLog(`PINNING ${artifact.cid}, FETCHING ${artifact.car}`)
             try {
-              const { content } = KuboRpcClient.urlSource(artifact.car)
+              const { content } = KuboRpcClient.urlSource(artifact.car, { signal: AbortSignal.timeout(5000) })
               let returnedCid
               for await (const file of node.dag.import(content)) {
                 returnedCid = file.root.cid
@@ -250,7 +250,7 @@ if ($response === false) {
               appendLog(`Unable to download ${artifact.car} ${error}`)
 
               const cid = Multiformats.CID.parse(artifact.cid.toString())
-              const pinned = await node.pin.add(cid)
+              const pinned = await node.pin.add(cid, { signal: AbortSignal.timeout(5000) })
               appendLog(pinned)
 
             }
