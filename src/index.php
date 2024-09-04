@@ -233,28 +233,13 @@ if ($response === false) {
               appendLog(`${cid} is already pinned, skipping`)
             }
           } catch {
-            appendLog(`PINNING ${artifact.cid}, FETCHING ${artifact.car}`)
+            appendLog(`PINNING ${artifact.cid}`)
             try {
-              const { content } = KuboRpcClient.urlSource(artifact.car, { signal: AbortSignal.timeout(60000) })
-              let returnedCid
-              for await (const file of node.dag.import(content)) {
-                returnedCid = file.root.cid
-              }
-
-              if(Multiformats.CID.parse(returnedCid.toString()).toV1().toString() === Multiformats.CID.parse(artifact.cid.toString()).toV1().toString()) {
-                appendLog(`Successfully pinned ` + artifact.car)
-              } else {
-                appendLog(`CID mismatch, failed to pin: ${artifact.car} EXPECTED: ${artifact.cid} GOT: ${returnedCid}`)
-              }
-            } catch (error) {
-              appendLog(`Unable to download ${artifact.car} ${error}. Trying IPFS PIN add rpc call`)
-              try {
-                const cid = Multiformats.CID.parse(artifact.cid.toString())
-                const pinned = await node.pin.add(cid, { signal: AbortSignal.timeout(60000) })
-                appendLog(pinned)
-              } catch {
-                appendLog(`IPFS PIN add failed, giving up on ${artifact.cid}`)
-              }
+              const cid = Multiformats.CID.parse(artifact.cid.toString())
+              const pinned = await node.pin.add(cid, { signal: AbortSignal.timeout(60000) })
+              appendLog(pinned)
+            } catch {
+              appendLog(`IPFS PIN add failed, giving up on ${artifact.cid}`)
             }
           } finally {
             count++
