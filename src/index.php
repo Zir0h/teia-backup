@@ -227,20 +227,13 @@ if ($response === false) {
         const artifacts = <?php echo json_encode(array_values($found)) . "\n"; ?>
         let count = 0
         for(const artifact of artifacts) {
+          appendLog(`PINNING ${artifact.cid}`)
           try {
-            const cid = artifact.platform !== 'HEN' ? Multiformats.CID.parse(artifact.cid.toString()).toV1().toString() : artifact.cid
-            for await (const { returnedCid, type } of node.pin.ls({ type: 'recursive', paths: [cid] })) {
-              appendLog(`${cid} is already pinned, skipping`)
-            }
+            const cid = Multiformats.CID.parse(artifact.cid.toString())
+            const pinned = await node.pin.add(cid, { signal: AbortSignal.timeout(60000) })
+            appendLog(pinned)
           } catch {
-            appendLog(`PINNING ${artifact.cid}`)
-            try {
-              const cid = Multiformats.CID.parse(artifact.cid.toString())
-              const pinned = await node.pin.add(cid, { signal: AbortSignal.timeout(60000) })
-              appendLog(pinned)
-            } catch {
-              appendLog(`IPFS PIN add failed, giving up on ${artifact.cid}`)
-            }
+            appendLog(`IPFS PIN add failed, giving up on ${artifact.cid}`)
           } finally {
             count++
             pinningStatus.innerText = count
