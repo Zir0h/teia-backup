@@ -22,6 +22,10 @@ $query = 'query sitemap {
     tokens {
         token_id
     }
+    teia_users {
+        user_address
+        name
+    }
 }';
 
 $curl = curl_init(getenv('TEZTOK_URL'));
@@ -37,33 +41,60 @@ curl_close($curl);
 
 if ($response) {
     $data = json_decode($response, true);
+    $total = count($data['data']['tokens']);
+    for ($i = 0; $i <= $total; $i += getenv('SITEMAP_SIZE')) {
+        // Create a new DOM document
+        $dom = new DOMDocument('1.0', 'UTF-8');
+        $dom->formatOutput = false;
 
-    if (isset($data['data']['tokens'])) {
-        $total = count($data['data']['tokens']);
-        for($i = 0; $i < $total; $i += getenv('SITEMAP_SIZE')) {
-            // Create a new DOM document
-            $dom = new DOMDocument('1.0', 'UTF-8');
-            $dom->formatOutput = false;
+        // Create the root <urlset> element
+        $urlset = $dom->createElement('urlset');
+        $urlset->setAttribute('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9');
+        $dom->appendChild($urlset);
 
-            // Create the root <urlset> element
-            $urlset = $dom->createElement('urlset');
-            $urlset->setAttribute('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9');
-            $dom->appendChild($urlset);
-
-            // Iterate over the tokens and create <url> elements
-            foreach ($data['data']['tokens'] as $token) {
+        for ($j = $i; $j <= $i + getenv('SITEMAP_SIZE'); $j++) {
+            if(isset($data['data']['tokens'][$j]['token_id'])) {
                 $url = $dom->createElement('url');
-                $loc = $dom->createElement('loc', getenv('BASE_URL') . '/objkt/' . $token['token_id']);
+                $loc = $dom->createElement('loc', getenv('BASE_URL') . '/objkt/' . $data['data']['tokens'][$j]['token_id']);
                 $url->appendChild($loc);
                 $urlset->appendChild($url);
             }
-            $dom->save('/var/www/sitemap/sitemap_' . $i . '.xml');
-
-            $sub = $sitemap->createElement('sitemap');
-            $loc = $sitemap->createElement('loc', getenv('SITEMAP_HOST') . '/sitemap/sitemap_' . $i . '.xml');
-            $sub->appendChild($loc);
-            $sitemapindex->appendChild($sub);
         }
+
+        $dom->save('/var/www/sitemap/sitemap_tokens_' . $i . '.xml');
+
+        $sub = $sitemap->createElement('sitemap');
+        $loc = $sitemap->createElement('loc', getenv('SITEMAP_HOST') . '/sitemap/sitemap_tokens_' . $i . '.xml');
+        $sub->appendChild($loc);
+        $sitemapindex->appendChild($sub);
+    }
+
+    $total = count($data['data']['teia_users']);
+    for ($i = 0; $i <= $total; $i += getenv('SITEMAP_SIZE')) {
+        // Create a new DOM document
+        $dom = new DOMDocument('1.0', 'UTF-8');
+        $dom->formatOutput = false;
+
+        // Create the root <urlset> element
+        $urlset = $dom->createElement('urlset');
+        $urlset->setAttribute('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9');
+        $dom->appendChild($urlset);
+
+        for ($j = $i; $j <= $i + getenv('SITEMAP_SIZE'); $j++) {
+            if(isset($data['data']['teia_users'][$j]['user_address'])) {
+                $url = $dom->createElement('url');
+                $loc = $dom->createElement('loc', getenv('BASE_URL') . '/tz/' . $data['data']['teia_users'][$j]['user_address']);
+                $url->appendChild($loc);
+                $urlset->appendChild($url);
+            }
+        }
+
+        $dom->save('/var/www/sitemap/sitemap_users_' . $i . '.xml');
+
+        $sub = $sitemap->createElement('sitemap');
+        $loc = $sitemap->createElement('loc', getenv('SITEMAP_HOST') . '/sitemap/sitemap_users_' . $i . '.xml');
+        $sub->appendChild($loc);
+        $sitemapindex->appendChild($sub);
     }
 }
 
